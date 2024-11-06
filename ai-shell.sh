@@ -126,9 +126,12 @@ while true; do
         continue
     fi
 
-    # Check if input is a valid system command
-    if command -v "$user_input" &> /dev/null; then
-        execute_command "$user_input"
+    # Extract the base command (the first word) from user input
+    base_command=$(echo "$user_input" | awk '{print $1}')
+
+    # Check if the base command exists in the system
+    if command -v "$base_command" &> /dev/null; then
+        execute_command "$user_input"  # Execute the full input including options
     else
         # Query Gemini to generate the command for the task
         echo -e "${BLUE}[+] Interpreting natural language input through Google Gemini...${NC}"
