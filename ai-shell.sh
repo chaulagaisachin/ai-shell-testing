@@ -6,6 +6,40 @@ BLUE='\033[34m'     # Blue
 RED='\033[31m'      # Red
 YELLOW='\033[33m'   # Yellow
 
+# Function to display help message
+display_help() {
+    echo -e "${BLUE}AI-Shell - Natural Language to System Commands${NC}"
+    echo -e "${BLUE}--------------------------------------------${NC}"
+    echo -e "This script allows you to interact with your system using natural language commands."
+    echo -e "It will attempt to convert your input into an executable system command and execute it."
+    echo -e "If a command is not recognized, it will query Google Gemini to generate the appropriate command."
+    echo -e ""
+    echo -e "${YELLOW}Usage:${NC}"
+    echo -e "  $0 [options]"
+    echo -e ""
+    echo -e "${YELLOW}Options:${NC}"
+    echo -e "  -h, --help         Show this help message and exit"
+    echo -e "  -r, --recur        Run in interactive mode (multiple commands)"
+    echo -e "  <command>          Enter your system task in natural language (e.g., 'list files')"
+    echo -e ""
+    echo -e "${YELLOW}Note:${NC}"
+    echo -e "  - The script requires an API_KEY for Google Gemini, which should be set in the .env file."
+    echo -e "  - You will be asked to confirm the execution of suggested commands, especially those involving 'sudo'."
+    exit 0
+}
+
+# If --help or -h is passed, display the help message and exit
+if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+    display_help
+fi
+
+# Check if --recur or -r is passed to enter interactive mode
+INTERACTIVE_MODE=false
+if [[ "$1" == "--recur" ]] || [[ "$1" == "-r" ]]; then
+    INTERACTIVE_MODE=true
+    shift  # Remove the flag to process any remaining arguments
+fi
+
 # Load environment variables from .env file
 if [ -f .env ]; then
     source .env
@@ -72,91 +106,104 @@ shell_version=$(bash --version | head -n 1)
 # Function to query Gemini API
 query_gemini() {
     local query="$1"
-    # Adjust the query to ask for only the command to perform the task, ensuring it's precise and doesn't start with bash
     query="Please provide me only the system command (do not start with 'bash') to perform the following task on a system with the following OS: $os_version, Shell version: $shell_version. Task: $query"
     response=$(curl -s -X POST "$GEMINI_API_ENDPOINT" -H "Content-Type: application/json" -d "{\"contents\":[{\"parts\":[{\"text\":\"$query\"}]}]}")
     command=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text' 2>/dev/null)
     echo "$command"
 }
 
-# Function to clean the command (remove unexpected characters and backticks)
+# Function to clean the command
 clean_command() {
     local command="$1"
-    # Remove backticks and any other unwanted characters like newlines or extra spaces
-    command=$(echo "$command" | tr -d '\n' | sed 's/^[ \t]*//;s/[ \t]*$//')  # Trim spaces and newlines
-    command=$(echo "$command" | sed 's/`//g')  # Remove backticks
+    command=$(echo "$command" | tr -d '\n' | sed 's/^[ \t]*//;s/[ \t]*$//')
+    command=$(echo "$command" | sed 's/`//g')
     echo "$command"
 }
 
 # Function to execute a system command
 execute_command() {
     local command="$1"
-    # Clean the command before execution
     command=$(clean_command "$command")
     
-    # Check if command contains 'sudo'
     if [[ "$command" == *"sudo"* ]]; then
         echo -e "${RED}[**] Warning: The command includes 'sudo'. This tool is for educational purposes only.${NC}"
         read -p "Do you want to execute this command with 'sudo'? (yes/no): " confirm
         if [[ "$confirm" == "yes" ]]; then
-            eval "$command"  # Execute with sudo
+            eval "$command"
         else
-            echo -e "${YELLOW}[!] Command execution canceled.${NC}"  # Changed to yellow with [!]
+            echo -e "${YELLOW}[!] Command execution canceled.${NC}"
         fi
     else
-        eval "$command"  # Execute without sudo
+        eval "$command"
     fi
 }
 
-# Print initial prompt once
-echo -e "${BLUE}[+] Enter your command or task in natural language (or type 'exit' to quit):${NC}"
+# Run in Single Command Mode if no arguments passed (unless --recur flag is used)
+if [ $# -ge 1 ] && ! $INTERACTIVE_MODE; then
+    user_input="$*"
+    echo -e "${BLUE}[+] Running a single command: $user_input${NC}"
+    command=$(query_gemini "$user_input")
+    command=$(clean_command "$command")
+    
+    if [[ -n "$command" && "$command" != "null" ]]; then
+        echo -e "${BLUE}[+] Suggested command: $command${NC}"
 
-# Main loop
-while true; do
-    read -p $'\e[34m[>>]\e[0m ' -r user_input
-
-    # Exit the loop if the user types 'exit'
-    if [[ "$user_input" == "exit" ]]; then
-        echo -e "${BLUE}[+] Exiting program.${NC}"
-        break
-    fi
-
-    # If the user input is empty, continue to the next prompt
-    if [[ -z "$user_input" ]]; then
-        continue
-    fi
-
-    # Extract the base command (the first word) from user input
-    base_command=$(echo "$user_input" | awk '{print $1}')
-
-    # Check if the base command exists in the system
-    if command -v "$base_command" &> /dev/null; then
-        execute_command "$user_input"  # Execute the full input including options
-    else
-        # Query Gemini to generate the command for the task
-        echo -e "${BLUE}[+] Interpreting natural language input through Google Gemini...${NC}"
-        command=$(query_gemini "$user_input")
-
-        # Clean the command before displaying it to the user
-        command=$(clean_command "$command")
-
-        if [[ -n "$command" && "$command" != "null" ]]; then
-            echo -e "${BLUE}[+] Suggested command: $command${NC}"  # Display cleaned command without backticks
-
-            # Only warn once if the command contains 'sudo'
-            if [[ "$command" == *"sudo"* ]]; then
-                echo -e "${RED}[**] Warning: The suggested command includes 'sudo'. This tool is for educational purposes only.${NC}"
-            fi
-
-            # Ask user for confirmation to execute the command
-            read -p "Do you want to execute this command? (yes/no): " confirm
-            if [[ "$confirm" == "yes" ]]; then
-                execute_command "$command"
-            else
-                echo -e "${YELLOW}[!] Command execution canceled.${NC}"  # Changed to yellow with [!]
-            fi
-        else
-            echo -e "${RED}[!] Could not interpret the task. Please try a different wording.${NC}"
+        if [[ "$command" == *"sudo"* ]]; then
+            echo -e "${RED}[**] Warning: The suggested command includes 'sudo'. This tool is for educational purposes only.${NC}"
         fi
+
+        read -p "Do you want to execute this command? (yes/no): " confirm
+        if [[ "$confirm" == "yes" ]]; then
+            execute_command "$command"
+        else
+            echo -e "${YELLOW}[!] Command execution canceled.${NC}"
+        fi
+    else
+        echo -e "${RED}[!] Could not interpret the task. Please try a different wording.${NC}"
     fi
-done
+    exit 0  # Exit after a single command execution
+fi
+
+# Main loop for Interactive Mode
+if $INTERACTIVE_MODE; then
+    echo -e "${BLUE}[+] Enter your command or task in natural language (or type 'exit' to quit):${NC}"
+    
+    while true; do
+        read -p $'\e[34m[>>]\e[0m ' -r user_input
+
+        if [[ "$user_input" == "exit" ]]; then
+            echo -e "${BLUE}[+] Exiting program.${NC}"
+            break
+        fi
+
+        if [[ -z "$user_input" ]]; then
+            continue
+        fi
+
+        base_command=$(echo "$user_input" | awk '{print $1}')
+
+        if command -v "$base_command" &> /dev/null; then
+            execute_command "$user_input"
+        else
+            echo -e "${BLUE}[+] Interpreting natural language input through Google Gemini...${NC}"
+            command=$(query_gemini "$user_input")
+            if [[ -n "$command" && "$command" != "null" ]]; then
+                command=$(clean_command "$command")
+                echo -e "${BLUE}[+] Suggested command: $command${NC}"
+                
+                if [[ "$command" == *"sudo"* ]]; then
+                    echo -e "${RED}[**] Warning: The suggested command includes 'sudo'. This tool is for educational purposes only.${NC}"
+                fi
+
+                read -p "Do you want to execute this command? (yes/no): " confirm
+                if [[ "$confirm" == "yes" ]]; then
+                    execute_command "$command"
+                else
+                    echo -e "${YELLOW}[!] Command execution canceled.${NC}"
+                fi
+            else
+                echo -e "${RED}[!] Could not interpret the task. Please try a different wording.${NC}"
+            fi
+        fi
+    done
+fi
