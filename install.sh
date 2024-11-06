@@ -2,18 +2,24 @@
 
 # --- Installation Script for AI-Shell ---
 
+# Define colors
+NORMAL="\033[0;34m"   # Blue
+WARNING="\033[0;33m"  # Yellow
+ERROR="\033[0;31m"    # Red
+RESET="\033[0m"       # Reset to default color
+
 # Define the installation directory
 INSTALL_DIR="/usr/local/bin"
 AI_SHELL_PATH="$INSTALL_DIR/ai-shell.sh"
 
 # Check if the script is running with root privileges
 if [ "$(id -u)" -ne 0 ]; then
-    echo -e "[!] This script requires root (sudo) privileges. Please run as root."
+    echo -e "${ERROR}[!] This script requires root (sudo) privileges. Please run as root.${RESET}"
     exit 1
 fi
 
 # Install dependencies: figlet, lolcat, and jq
-echo -e "[+] Installing dependencies: figlet, lolcat, jq"
+echo -e "${NORMAL}[+] Installing dependencies: figlet, lolcat, jq${RESET}"
 
 # Update package index and install the required packages based on the OS
 if [ -f /etc/debian_version ]; then
@@ -25,38 +31,38 @@ elif command -v brew &> /dev/null; then
     # For macOS (using Homebrew)
     brew install figlet lolcat jq
 else
-    echo -e "[!] Unsupported OS. Please install figlet, lolcat, and jq manually."
+    echo -e "${WARNING}[!] Unsupported OS. Please install figlet, lolcat, and jq manually.${RESET}"
     exit 1
 fi
 
-# Clone or download ai-shell.sh into the installation directory
-echo -e "[+] Downloading ai-shell.sh"
-sudo git clone https://your-repository-url.git "$INSTALL_DIR/ai-shell"
+# Clone the repository into the installation directory
+echo -e "${NORMAL}[+] Downloading ai-shell.sh${RESET}"
+sudo git clone https://github.com/chaulagaisachin/ai-shell "$INSTALL_DIR/ai-shell"
 
 # Copy ai-shell.sh to the specified location
-echo -e "[+] Installing ai-shell.sh in $INSTALL_DIR"
+echo -e "${NORMAL}[+] Installing ai-shell.sh in $INSTALL_DIR${RESET}"
 sudo cp "$INSTALL_DIR/ai-shell/ai-shell.sh" "$AI_SHELL_PATH"
 
 # Create an .env file to store the API_KEY
-echo -e "[+] Creating .env file for storing the API_KEY"
+echo -e "${NORMAL}[+] Creating .env file for storing the API_KEY${RESET}"
 cat <<EOF | sudo tee "$INSTALL_DIR/.env" > /dev/null
 # .env file for storing the Google Gemini API_KEY for AI-Shell
 API_KEY=""
 EOF
 
 # Set permissions to secure the .env file
-echo -e "[+] Securing the .env file"
+echo -e "${NORMAL}[+] Securing the .env file${RESET}"
 sudo chmod 600 "$INSTALL_DIR/.env"
 
 # Ensure ai-shell.sh is executable
-echo -e "[+] Making ai-shell.sh executable"
+echo -e "${NORMAL}[+] Making ai-shell.sh executable${RESET}"
 sudo chmod +x "$AI_SHELL_PATH"
 
 # Check if installation was successful
 if [ -f "$AI_SHELL_PATH" ] && [ -f "$INSTALL_DIR/.env" ]; then
-    echo -e "[+] Installation complete. AI-Shell is now located at $AI_SHELL_PATH"
-    echo -e "[+] Please edit the .env file at $INSTALL_DIR/.env and add your Google Gemini API key."
+    echo -e "${NORMAL}[+] Installation complete. AI-Shell is now located at $AI_SHELL_PATH${RESET}"
+    echo -e "${NORMAL}[+] Please edit the .env file at $INSTALL_DIR/.env and add your Google Gemini API key.${RESET}"
 else
-    echo -e "[!] Installation failed."
+    echo -e "${ERROR}[!] Installation failed.${RESET}"
     exit 1
 fi
