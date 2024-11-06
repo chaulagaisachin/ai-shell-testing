@@ -9,7 +9,7 @@ ERROR="\033[0;31m"    # Red
 RESET="\033[0m"       # Reset to default color
 
 # Define the installation directory
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="/usr/local/bin/ai-shell"
 AI_SHELL_PATH="$INSTALL_DIR/ai-shell.sh"
 
 # Check if the script is running with root privileges
@@ -37,22 +37,18 @@ fi
 
 # Clone the repository into the installation directory
 echo -e "${NORMAL}[+] Downloading ai-shell.sh${RESET}"
-sudo git clone https://github.com/chaulagaisachin/ai-shell "$INSTALL_DIR/ai-shell"
+sudo git clone https://github.com/chaulagaisachin/ai-shell "$INSTALL_DIR"
 
 # Copy ai-shell.sh to the specified location
 echo -e "${NORMAL}[+] Installing ai-shell.sh in $INSTALL_DIR${RESET}"
 sudo cp "$INSTALL_DIR/ai-shell/ai-shell.sh" "$AI_SHELL_PATH"
 
 # Create an .env file to store the API_KEY
-echo -e "${NORMAL}[+] Creating .env file for storing the API_KEY${RESET}"
+echo -e "${NORMAL}[+] Creating .env file for storing the API_KEY in $INSTALL_DIR${RESET}"
 cat <<EOF | sudo tee "$INSTALL_DIR/.env" > /dev/null
 # .env file for storing the Google Gemini API_KEY for AI-Shell
 API_KEY=""
 EOF
-
-# Set permissions to secure the .env file
-echo -e "${NORMAL}[+] Securing the .env file${RESET}"
-sudo chmod 600 "$INSTALL_DIR/.env"
 
 # Ensure ai-shell.sh is executable
 echo -e "${NORMAL}[+] Making ai-shell.sh executable${RESET}"
@@ -62,6 +58,7 @@ sudo chmod +x "$AI_SHELL_PATH"
 if [ -f "$AI_SHELL_PATH" ] && [ -f "$INSTALL_DIR/.env" ]; then
     echo -e "${NORMAL}[+] Installation complete. AI-Shell is now located at $AI_SHELL_PATH${RESET}"
     echo -e "${NORMAL}[+] Please edit the .env file at $INSTALL_DIR/.env and add your Google Gemini API key.${RESET}"
+    echo -e "${WARNING}[!] For security, after adding your API key, you may want to restrict access to the .env file by running: sudo chmod 600 $INSTALL_DIR/.env${RESET}"
 else
     echo -e "${ERROR}[!] Installation failed.${RESET}"
     exit 1
