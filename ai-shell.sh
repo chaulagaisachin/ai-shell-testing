@@ -15,12 +15,12 @@ display_help() {
     echo -e "If a command is not recognized, it will query Google Gemini to generate the appropriate command."
     echo -e ""
     echo -e "${YELLOW}Usage:${NC}"
-    echo -e "  $0 [options]"
+    echo -e "  $0 [options] <command>"
     echo -e ""
     echo -e "${YELLOW}Options:${NC}"
     echo -e "  -h, --help         Show this help message and exit"
     echo -e "  -r, --recur        Run in interactive mode (multiple commands)"
-    echo -e "  <command>          Enter your system task in natural language (e.g., 'list files')"
+    echo -e "<command>            Enter your system task in natural language (e.g., 'list files')"
     echo -e ""
     echo -e "${YELLOW}Note:${NC}"
     echo -e "  - The script requires an API_KEY for Google Gemini, which should be set in the .env file."
@@ -40,11 +40,11 @@ if [[ "$1" == "--recur" ]] || [[ "$1" == "-r" ]]; then
     shift  # Remove the flag to process any remaining arguments
 fi
 
-# Load environment variables from .env file
-if [ -f .env ]; then
-    source .env
+# Ensure that .env is sourced from the correct location
+if [ -f /usr/local/bin/ai-shell-install/.env ]; then
+    source /usr/local/bin/ai-shell-install/.env
 else
-    echo -e "${RED}[!] .env file not found!${NC}"
+    echo -e "${RED}[!] .env file not found in /usr/local/bin/ai-shell-install!${NC}"
     exit 1
 fi
 
@@ -183,18 +183,15 @@ if $INTERACTIVE_MODE; then
         base_command=$(echo "$user_input" | awk '{print $1}')
 
         if command -v "$base_command" &> /dev/null; then
+            echo -e "${BLUE}[+] Executing system command directly: $base_command${NC}"
             execute_command "$user_input"
         else
-            echo -e "${BLUE}[+] Interpreting natural language input through Google Gemini...${NC}"
+            echo -e "${BLUE}[+] Querying Gemini for the command...${NC}"
             command=$(query_gemini "$user_input")
+            command=$(clean_command "$command")
+            
             if [[ -n "$command" && "$command" != "null" ]]; then
-                command=$(clean_command "$command")
                 echo -e "${BLUE}[+] Suggested command: $command${NC}"
-                
-                if [[ "$command" == *"sudo"* ]]; then
-                    echo -e "${RED}[**] Warning: The suggested command includes 'sudo'. This tool is for educational purposes only.${NC}"
-                fi
-
                 read -p "Do you want to execute this command? (yes/no): " confirm
                 if [[ "$confirm" == "yes" ]]; then
                     execute_command "$command"
@@ -202,7 +199,7 @@ if $INTERACTIVE_MODE; then
                     echo -e "${YELLOW}[!] Command execution canceled.${NC}"
                 fi
             else
-                echo -e "${RED}[!] Could not interpret the task. Please try a different wording.${NC}"
+                echo -e "${RED}[!] Could not interpret the task. Please try again with different wording.${NC}"
             fi
         fi
     done
