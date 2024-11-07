@@ -10,6 +10,7 @@ YELLOW='\033[33m'   # Yellow
 # Print banner using figlet and lolcat
 echo -e "${BLUE}$(figlet 'AI-Shell')${NC}"
 echo -e "${RED}$(lolcat <<< 'Automating your system commands, one joke at a time!')${NC}"
+echo -e "${YELLOW}Disclaimer: This tool is for educational purposes only. Use it at your own risk. The creator or any contributors are not liable for any damage caused by its use.${NC}"
 
 # Function to display help message
 display_help() {
@@ -30,6 +31,9 @@ display_help() {
     echo -e "${YELLOW}Note:${NC}"
     echo -e "  - The script requires an API_KEY for Google Gemini, which should be set in the .env file."
     echo -e "  - You will be asked to confirm the execution of suggested commands, especially those involving 'sudo'."
+    echo -e ""
+    echo -e "${YELLOW}Disclaimer:${NC}"
+    echo -e "  This tool is for educational purposes only. Use it at your own risk. The creator or any contributors are not liable for any damage caused by its use."
     exit 0
 }
 
