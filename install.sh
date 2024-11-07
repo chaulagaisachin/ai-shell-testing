@@ -11,6 +11,7 @@ RESET="\033[0m"       # Reset to default color
 # Define the installation directory
 INSTALL_DIR="/usr/local/bin/ai-shell-install"
 AI_SHELL_PATH="$INSTALL_DIR/ai-shell.sh"
+SYMLINK_PATH="/usr/local/bin/ai-shell"
 
 # Check if the script is running with root privileges
 if [ "$(id -u)" -ne 0 ]; then
@@ -54,9 +55,14 @@ EOF
 echo -e "${NORMAL}[+] Making ai-shell.sh executable${RESET}"
 sudo chmod +x "$AI_SHELL_PATH"
 
+# Create a symbolic link to ai-shell.sh for easier access
+echo -e "${NORMAL}[+] Creating symbolic link to ai-shell.sh at $SYMLINK_PATH${RESET}"
+sudo ln -sf "$AI_SHELL_PATH" "$SYMLINK_PATH"
+
 # Check if installation was successful
 if [ -f "$AI_SHELL_PATH" ] && [ -f "$INSTALL_DIR/.env" ]; then
     echo -e "${NORMAL}[+] Installation complete. AI-Shell is now located at $AI_SHELL_PATH${RESET}"
+    echo -e "${NORMAL}[+] You can run AI-Shell by simply typing 'ai-shell' in your terminal.${RESET}"
     echo -e "${NORMAL}[+] Please edit the .env file at $INSTALL_DIR/.env and add your Google Gemini API key.${RESET}"
     echo -e "${WARNING}[!] For security, after adding your API key, you may want to restrict access to the .env file by running: sudo chmod 600 $INSTALL_DIR/.env${RESET}"
 else
