@@ -163,7 +163,10 @@ if $INTERACTIVE_MODE; then
         cwd="${cwd/#$HOME/~}"
 
         # Use the -e flag to allow for interactive input with arrow key support
-        read -e -p "\e[34m[$cwd >>]\e[0m " -r user_input  # Use -e for readline support
+        # Ensure correct display of colors and working directory
+        PS1="\[\033[34m\][$cwd >>]\[\033[0m\] "  # This is where the color and directory prompt is set
+
+        read -e -p "$PS1" -r user_input  # Use -e for readline support
 
         if [[ "$user_input" == "exit" ]]; then
             echo -e "${BLUE}[+] Exiting program.${NC}"
@@ -180,16 +183,13 @@ if $INTERACTIVE_MODE; then
             # Skip the "[+] Executing system command directly" message for direct commands
             execute_command "$user_input"
         else
-            echo -e "${BLUE}[+] Command not recognized. Querying Gemini...${NC}"
+            echo -e "${BLUE}[+] Command not recognized. Querying Gemini for the system command...${NC}"
             command=$(query_gemini "$user_input")
-            command=$(clean_command "$command")
-
             if [[ -n "$command" && "$command" != "null" ]]; then
                 echo -e "${BLUE}[+] Suggested command: ${PINK}$command${NC}"
                 if [[ "$command" == *"sudo"* ]]; then
                     echo -e "${RED}[**] Warning: The suggested command includes 'sudo'. This tool is for educational purposes only.${NC}"
                 fi
-
                 read -p "Do you want to execute this command? (yes/no): " confirm
                 if [[ "$confirm" == "yes" ]]; then
                     execute_command "$command"
