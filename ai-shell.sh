@@ -157,8 +157,13 @@ if $INTERACTIVE_MODE; then
     # Enable history navigation
     history -r  # Read the history file into memory
     while true; do
+        # Get the present working directory and format it
+        cwd=$(pwd)
+        # Replace home directory with ~
+        cwd="${cwd/#$HOME/~}"
+
         # Use the -e flag to allow for interactive input with arrow key support
-        read -e -p $'\e[34m[>>]\e[0m ' -r user_input  # Use -e for readline support
+        read -e -p "\e[34m[$cwd >>]\e[0m " -r user_input  # Use -e for readline support
 
         if [[ "$user_input" == "exit" ]]; then
             echo -e "${BLUE}[+] Exiting program.${NC}"
