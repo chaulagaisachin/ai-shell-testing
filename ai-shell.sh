@@ -33,6 +33,12 @@ if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
     display_help
 fi
 
+# If no arguments are passed, display usage instructions
+if [ $# -eq 0 ]; then
+    echo -e "${BLUE}AI-Shell: Please provide a task in natural language or use the ${YELLOW}--help${NC} option for more information.${NC}"
+    exit 0
+fi
+
 # Check if --recur or -r is passed to enter interactive mode
 INTERACTIVE_MODE=false
 if [[ "$1" == "--recur" ]] || [[ "$1" == "-r" ]]; then
@@ -54,54 +60,14 @@ if [ -z "$API_KEY" ]; then
     exit 1
 fi
 
-# Check if jq is installed
-if ! command -v jq &> /dev/null; then
-    echo -e "${YELLOW}[+] jq is not installed. Installing...${NC}"
-    sudo apt update && sudo apt install jq -y || {
-        echo -e "${RED}[**] Failed to install jq. Please install it manually.${NC}"
-        exit 1
-    }
-fi
+# Enable command history
+HISTFILE=~/.ai_shell_history   # Define the history file
+HISTSIZE=1000                  # Set the maximum number of commands to remember
+HISTCONTROL=ignoredups         # Ignore duplicate commands
 
-# Check if figlet and lolcat are installed
-if ! command -v figlet &> /dev/null; then
-    echo -e "${YELLOW}[+] figlet is not installed. Would you like to install it? (yes/no)${NC}"
-    read -r install_figlet
-    if [[ "$install_figlet" == "yes" ]]; then
-        sudo apt install figlet -y || {
-            echo -e "${RED}[**] Failed to install figlet. Please install it manually.${NC}"
-            exit 1
-        }
-    else
-        echo -e "${RED}[**] figlet is required to display the banner. Exiting...${NC}"
-        exit 1
-    fi
-fi
-
-if ! command -v lolcat &> /dev/null; then
-    echo -e "${YELLOW}[+] lolcat is not installed. Would you like to install it? (yes/no)${NC}"
-    read -r install_lolcat
-    if [[ "$install_lolcat" == "yes" ]]; then
-        sudo apt install lolcat -y || {
-            echo -e "${RED}[**] Failed to install lolcat. Please install it manually.${NC}"
-            exit 1
-        }
-    else
-        echo -e "${RED}[**] lolcat is required for the funny message. Exiting...${NC}"
-        exit 1
-    fi
-fi
-
-# Print banner using figlet and lolcat
-echo -e "${BLUE}$(figlet 'AI-Shell')${NC}"
-echo -e "${RED}$(lolcat <<< 'Automating your system commands, one joke at a time!')${NC}"
-
-# Define Google Gemini API endpoint
-GEMINI_API_ENDPOINT="https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$API_KEY"
-
-# Get OS version and shell version
-os_version=$(uname -a)
-shell_version=$(bash --version | head -n 1)
+export HISTFILE
+export HISTSIZE
+export HISTCONTROL
 
 # Function to query Gemini API
 query_gemini() {
@@ -169,7 +135,7 @@ if $INTERACTIVE_MODE; then
     echo -e "${BLUE}[+] Enter your command or task in natural language (or type 'exit' to quit):${NC}"
     
     while true; do
-        read -p $'\e[34m[>>]\e[0m ' -r user_input
+        read -e -p $'\e[34m[>>]\e[0m ' -r user_input  # Use -e for readline support
 
         if [[ "$user_input" == "exit" ]]; then
             echo -e "${BLUE}[+] Exiting program.${NC}"
@@ -192,6 +158,11 @@ if $INTERACTIVE_MODE; then
             
             if [[ -n "$command" && "$command" != "null" ]]; then
                 echo -e "${BLUE}[+] Suggested command: $command${NC}"
+
+                if [[ "$command" == *"sudo"* ]]; then
+                    echo -e "${RED}[**] Warning: The suggested command includes 'sudo'. This tool is for educational purposes only.${NC}"
+                fi
+
                 read -p "Do you want to execute this command? (yes/no): " confirm
                 if [[ "$confirm" == "yes" ]]; then
                     execute_command "$command"
@@ -199,7 +170,7 @@ if $INTERACTIVE_MODE; then
                     echo -e "${YELLOW}[!] Command execution canceled.${NC}"
                 fi
             else
-                echo -e "${RED}[!] Could not interpret the task. Please try again with different wording.${NC}"
+                echo -e "${RED}[!] Could not interpret the task. Please try a different wording.${NC}"
             fi
         fi
     done
