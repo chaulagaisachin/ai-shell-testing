@@ -9,7 +9,7 @@ ERROR="\033[0;31m"    # Red
 RESET="\033[0m"       # Reset to default color
 
 # Define the installation directory
-INSTALL_DIR="/usr/local/bin/ai-shell"
+INSTALL_DIR="/usr/local/bin/ai-shell-install"
 AI_SHELL_PATH="$INSTALL_DIR/ai-shell.sh"
 
 # Check if the script is running with root privileges
